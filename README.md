@@ -1,3 +1,7 @@
+## XJTU COMP551805 Lab
+
+### 原readme如下：
+
 ![dandelion_logo](./resources/icons/dandelion_64.png)
 
 # Dandelion 3D

@@ -91,6 +91,8 @@ void Object::update(vector<Object*>& all_objects)
     KineticState next_state = step(prev_state, current_state);
     (void)next_state;
     // 将物体的位置移动到下一步状态处，但暂时不要修改物体的速度。
+    center = next_state.position;
+    velocity = next_state.velocity;
     // 遍历 all_objects，检查该物体在下一步状态的位置处是否会与其他物体发生碰撞。
     for (auto object : all_objects) {
         (void)object;
@@ -113,6 +115,8 @@ void Object::update(vector<Object*>& all_objects)
         }
     }
     // 将上一步状态赋值为当前状态，并将物体更新到下一步状态。
+    prev_state = current_state;
+    current_state = next_state;
 }
 
 void Object::render(const Shader& shader, WorkingMode mode, bool selected)
