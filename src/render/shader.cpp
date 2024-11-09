@@ -72,8 +72,8 @@ Vector3f phong_fragment_shader(const FragmentShaderPayload& payload, const GL::M
         // 高光光
         Vector3f specular = material.specular * attenuation * std::pow(std::max(0.0f, (payload.world_normal).dot(half_vec)), material.shininess);
 
-        std::cout << "distance_squared: " << distance_squared <<std::endl;
-        std::cout << "light: " << attenuation <<std::endl;
+        //std::cout << "distance_squared: " << distance_squared <<std::endl;
+        //std::cout << "light: " << attenuation <<std::endl;
         // std::cout << "payload.world_pos: " << payload.world_pos.transpose() <<std::endl;
         // std::cout << "iter_light.position: " << iter_light.position.transpose() <<std::endl;
         // 累加光照贡献

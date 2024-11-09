@@ -89,29 +89,71 @@ void Object::update(vector<Object*>& all_objects)
     // 首先调用 step 函数计下一步该物体的运动学状态。
     KineticState current_state{center, velocity, force / mass};
     KineticState next_state = step(prev_state, current_state);
-    (void)next_state;
     // 将物体的位置移动到下一步状态处，但暂时不要修改物体的速度。
     center = next_state.position;
     velocity = next_state.velocity;
     // 遍历 all_objects，检查该物体在下一步状态的位置处是否会与其他物体发生碰撞。
     for (auto object : all_objects) {
-        (void)object;
-
         // 检测该物体与另一物体是否碰撞的方法是：
         // 遍历该物体的每一条边，构造与边重合的射线去和另一物体求交，如果求交结果非空、
         // 相交处也在这条边的两个端点之间，那么该物体与另一物体发生碰撞。
         // 请时刻注意：物体 mesh 顶点的坐标都在模型坐标系下，你需要先将其变换到世界坐标系。
+        if (object == this) {
+            // 跳过自身
+            continue;
+        }
         for (size_t i = 0; i < mesh.edges.count(); ++i) {
             array<size_t, 2> v_indices = mesh.edge(i);
-            (void)v_indices;
             // v_indices 中是这条边两个端点的索引，以这两个索引为参数调用 GL::Mesh::vertex
+            Eigen::Vector3f start = mesh.vertex(v_indices[0]).head<3>();
+            Eigen::Vector3f end = mesh.vertex(v_indices[1]).head<3>();
+            // 将三维向量扩展为四维齐次坐标
+            Eigen::Vector4f start_homogeneous(start.x(), start.y(), start.z(), 1.0f);
+            Eigen::Vector4f end_homogeneous(end.x(), end.y(), end.z(), 1.0f);
+
+            // 变换到世界坐标系
+            start_homogeneous = model() * start_homogeneous;
+            end_homogeneous = model() * end_homogeneous;
+
+            // 将齐次坐标转换回三维
+            start = start_homogeneous.head<3>();
+            end = end_homogeneous.head<3>();
             // 方法可以获得它们的坐标，进而用于构造射线。
+            Ray edge_ray;
+            edge_ray.origin = start;
+            edge_ray.direction = (end - start).normalized();
+
+            optional<Intersection> intersection_result;
             if (BVH_for_collision) {
             } else {
+                intersection_result = naive_intersect(edge_ray, object->mesh, object->model());
             }
             // 根据求交结果，判断该物体与另一物体是否发生了碰撞。
             // 如果发生碰撞，按动量定理计算两个物体碰撞后的速度，并将下一步状态的位置设为
             // current_state.position ，以避免重复碰撞。
+            if (intersection_result && intersection_result->t >= 0 && intersection_result->t <= (end - start).norm()) {
+                // 发生碰撞，计算碰撞后的速度
+                Eigen::Vector3f n = intersection_result->normal; // 碰撞法向量
+                float m1 = mass;
+                float m2 = object->mass;
+                Eigen::Vector3f v1 = velocity;
+                Eigen::Vector3f v2 = object->velocity;
+
+                Eigen::Vector3f vr = v2 - v1;
+
+                float j = vr.dot(n);
+
+                // 更新物体的速度
+                v1 += (j / m1) * n;
+                v2 -= (j / m2) * n;
+                velocity = v1;
+                object->velocity = v2;
+
+                // // 位置回退到当前状态，避免重复碰撞
+                next_state.position = current_state.position;
+                next_state.velocity = velocity;
+                break;
+            }
         }
     }
     // 将上一步状态赋值为当前状态，并将物体更新到下一步状态。
